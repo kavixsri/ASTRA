@@ -70,35 +70,61 @@ window.SolarFlareApp = window.SolarFlareApp || {};
           currentFlare = {
             id: 'FLARE-' + (this.flareEvents.length + 1),
             startTime: row.timestamp,
-            peakTime: row.timestamp, // will update
+            peakTime: row.timestamp, 
             endTime: row.timestamp,
-            goesClass: row.flare_class !== '0' && row.flare_class !== 'None' ? row.flare_class : 'C', // fallback
+            goesClass: row.flare_class !== '0' && row.flare_class !== 'None' ? row.flare_class : 'C', 
+            goesSubclass: '', // default empty
             peakFlux: row.soft_xray_flux,
+            peakSxrFlux: row.soft_xray_flux,
+            peakHxrFlux: (row.hard_xray_cdte + row.hard_xray_czt) / 2,
+            duration: 0,
+            riseTime: 0,
+            decayTime: 0,
+            sxrHxrRatio: row.soft_xray_flux / Math.max(1, (row.hard_xray_cdte + row.hard_xray_czt) / 2),
+            instrument: 'Aditya-L1 (SoLEXS/HEL1OS)',
             region: 'AR' + (4000 + Math.floor(Math.random() * 100))
           };
         } else if (row.is_flare === 1 && inFlare) {
           if (row.soft_xray_flux > currentFlare.peakFlux) {
-            currentFlare.peakFlux = row.soft_xray_flux;
-            currentFlare.peakTime = row.timestamp;
-            if (row.flare_class !== '0' && row.flare_class !== 'None') {
-              currentFlare.goesClass = row.flare_class;
-            }
+          currentFlare.peakFlux = row.soft_xray_flux;
+          currentFlare.peakSxrFlux = row.soft_xray_flux;
+          currentFlare.peakTime = row.timestamp;
+          if (row.flare_class !== '0' && row.flare_class !== 'None') {
+            currentFlare.goesClass = row.flare_class;
           }
-          currentFlare.endTime = row.timestamp;
+        }
+        const hxrAvg = (row.hard_xray_cdte + row.hard_xray_czt) / 2;
+        if (hxrAvg > currentFlare.peakHxrFlux) {
+          currentFlare.peakHxrFlux = hxrAvg;
+        }
+        currentFlare.endTime = row.timestamp;
         } else if (row.is_flare === 0 && inFlare) {
           inFlare = false;
-          // Only save if it has a real class (strip sub-class number for simplicity, e.g. M1.2 -> M)
-          if (currentFlare.goesClass.length > 1) {
-             currentFlare.goesClass = currentFlare.goesClass.charAt(0);
-          }
-          this.flareEvents.push(currentFlare);
-          currentFlare = null;
+        
+        // Calculate duration and rise/decay
+        currentFlare.duration = (currentFlare.endTime.getTime() - currentFlare.startTime.getTime()) / 1000;
+        currentFlare.riseTime = (currentFlare.peakTime.getTime() - currentFlare.startTime.getTime()) / 1000;
+        currentFlare.decayTime = (currentFlare.endTime.getTime() - currentFlare.peakTime.getTime()) / 1000;
+        currentFlare.sxrHxrRatio = currentFlare.peakSxrFlux / Math.max(1, currentFlare.peakHxrFlux);
+
+        if (currentFlare.goesClass.length > 1) {
+           currentFlare.goesSubclass = currentFlare.goesClass.substring(1);
+           currentFlare.goesClass = currentFlare.goesClass.charAt(0);
+        }
+        this.flareEvents.push(currentFlare);
+        currentFlare = null;
         }
       }
       
       // Close last flare if still open
       if (inFlare && currentFlare) {
+        currentFlare.duration = (currentFlare.endTime.getTime() - currentFlare.startTime.getTime()) / 1000;
+        currentFlare.riseTime = (currentFlare.peakTime.getTime() - currentFlare.startTime.getTime()) / 1000;
+        currentFlare.decayTime = (currentFlare.endTime.getTime() - currentFlare.peakTime.getTime()) / 1000;
+        currentFlare.sxrHxrRatio = currentFlare.peakSxrFlux / Math.max(1, currentFlare.peakHxrFlux);
+
         if (currentFlare.goesClass.length > 1) {
+             currentFlare.goesSubclass = currentFlare.goesClass.substring(1);
              currentFlare.goesClass = currentFlare.goesClass.charAt(0);
         }
         this.flareEvents.push(currentFlare);
