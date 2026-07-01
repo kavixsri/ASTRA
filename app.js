@@ -152,7 +152,7 @@ window.SolarFlareApp = window.SolarFlareApp || {};
   }
 
   async function init() {
-    const { DataGenerator, MLPipeline, Catalog, Charts } = window.SolarFlareApp;
+    const { DataLoader, MLPipeline, Catalog, Charts } = window.SolarFlareApp;
 
     setInterval(updateClock, 1000);
     updateClock();
@@ -165,10 +165,18 @@ window.SolarFlareApp = window.SolarFlareApp || {};
       let stepEl = document.querySelector('.pipeline-step[data-step="1"]');
       let statusEl = stepEl ? stepEl.querySelector('.step-status') : null;
       if (stepEl) stepEl.classList.add('active');
-      if (statusEl) statusEl.textContent = 'Generating synthetic SXR/HXR...';
+      if (stepEl) stepEl.classList.add('active');
+      if (statusEl) statusEl.textContent = 'Loading Aditya-L1 ISRO Datasets...';
 
-      const data = DataGenerator.generate({ numDays: 30, cadenceSeconds: 60 });
-      await sleep(1200);
+      const loader = new DataLoader('aligned_features.csv');
+      const loadSuccess = await loader.load();
+      
+      if (!loadSuccess) {
+        throw new Error('Failed to load dataset aligned_features.csv');
+      }
+      
+      const data = loader.getRawData();
+      await sleep(500);
 
       if (stepEl) { stepEl.classList.remove('active'); stepEl.classList.add('completed'); }
       if (statusEl) statusEl.textContent = 'Complete';
