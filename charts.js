@@ -136,7 +136,10 @@ window.SolarFlareApp = window.SolarFlareApp || {};
         scales: {
           x: {
             type: 'time',
-            time: { tooltipFormat: 'yyyy-MM-dd HH:mm', unit: 'day' },
+            time: {
+              tooltipFormat: 'yyyy-MM-dd HH:mm',
+              unit: (sxr.ts[sxr.ts.length - 1] - sxr.ts[0]) < 86400000 ? 'minute' : 'day'
+            },
             ticks: { color: COLORS.textSecondary, maxTicksLimit: 10 },
             grid: { color: COLORS.gridColor }
           },
@@ -589,26 +592,26 @@ window.SolarFlareApp = window.SolarFlareApp || {};
     });
   }
 
-  // ── 9. Probability Timeline (NEW) ──────────────────────────────────
+  // ── 9. Probability Timeline ──────────────────────────────────────
   function renderProbabilityTimeline(data, forecastResults) {
     const KEY = 'probabilityTimeline';
     destroyOld(KEY);
     const canvas = getCanvas('probability-timeline-chart');
     if (!canvas) return;
 
-    const classes = ['B', 'C', 'M', 'X'];
+    const classes = ['C', 'M', 'X'];
     const startMs = data.timestamps[0];
     const endMs = data.timestamps[data.timestamps.length - 1];
-    const windowMs = 24 * 60 * 60 * 1000; // 1-day rolling window
+    const spanMs = endMs - startMs;
+    
+    // Adaptive window: use 10-minute bins for short datasets, 1-day for long
+    const windowMs = spanMs < 86400000 ? 10 * 60 * 1000 : 24 * 60 * 60 * 1000;
 
-    // Build time ticks — one per day
     const timeTicks = [];
     for (let t = startMs; t <= endMs; t += windowMs) {
       timeTicks.push(t);
     }
 
-    // For each class, compute a running probability at each time tick
-    // based on forecast predictions that fall within a ±12 h window
     const halfWindow = windowMs / 2;
     const seriesByClass = {};
     classes.forEach(c => {
@@ -635,6 +638,9 @@ window.SolarFlareApp = window.SolarFlareApp || {};
       spanGaps: true
     }));
 
+    const timeUnit = spanMs < 86400000 ? 'minute' : 'day';
+    const timeFmt = spanMs < 86400000 ? 'HH:mm' : 'yyyy-MM-dd';
+
     instances[KEY] = new Chart(canvas, {
       type: 'line',
       data: { labels: timeTicks, datasets },
@@ -648,7 +654,7 @@ window.SolarFlareApp = window.SolarFlareApp || {};
         scales: {
           x: {
             type: 'time',
-            time: { tooltipFormat: 'yyyy-MM-dd', unit: 'day' },
+            time: { tooltipFormat: timeFmt, unit: timeUnit },
             ticks: { color: COLORS.textSecondary, maxTicksLimit: 10 },
             grid: { color: COLORS.gridColor }
           },

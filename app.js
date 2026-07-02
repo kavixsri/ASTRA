@@ -95,10 +95,11 @@ window.SolarFlareApp = window.SolarFlareApp || {};
 
     // Probability bars from forecast POD × class frequency
     const fm = forecastResults.metrics;
-    const probB = Math.round(Math.min(95, fm.podByClass.B * (classCount.B / total) * 300 + 15));
-    const probC = Math.round(Math.min(95, fm.podByClass.C * (classCount.C / total) * 400 + 20));
-    const probM = Math.round(Math.min(90, fm.podByClass.M * (classCount.M / total) * 800 + 10));
-    const probX = Math.round(Math.min(80, fm.podByClass.X * (classCount.X / total) * 1200 + 5));
+    const safeTotal = Math.max(1, total);
+    const probB = Math.round(Math.min(95, (fm.podByClass.B || 0) * (classCount.B / safeTotal) * 300 + 5));
+    const probC = Math.round(Math.min(95, (fm.podByClass.C || 0) * (classCount.C / safeTotal) * 400 + 20));
+    const probM = Math.round(Math.min(90, (fm.podByClass.M || 0) * (classCount.M / safeTotal) * 800 + 10));
+    const probX = Math.round(Math.min(80, (fm.podByClass.X || 0) * (classCount.X / safeTotal) * 1200 + 5));
 
     setTimeout(() => {
       ['B', 'C', 'M', 'X'].forEach(c => {
@@ -164,7 +165,6 @@ window.SolarFlareApp = window.SolarFlareApp || {};
       // Step 1: Data Ingestion
       let stepEl = document.querySelector('.pipeline-step[data-step="1"]');
       let statusEl = stepEl ? stepEl.querySelector('.step-status') : null;
-      if (stepEl) stepEl.classList.add('active');
       if (stepEl) stepEl.classList.add('active');
       if (statusEl) statusEl.textContent = 'Loading Aditya-L1 ISRO Datasets...';
 
